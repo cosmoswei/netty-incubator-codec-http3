@@ -20,39 +20,12 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.EncoderException;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.DefaultLastHttpContent;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpScheme;
-import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
@@ -83,10 +56,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class Http3FrameToHttpObjectCodecTest {
 
@@ -695,14 +665,14 @@ public class Http3FrameToHttpObjectCodecTest {
     public void testEncodeVoidPromise() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         ch.writeOneOutbound(new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.POST, "/hello/world", Unpooled.wrappedBuffer(new byte[1])),
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/hello/world", Unpooled.wrappedBuffer(new byte[1])),
                 ch.voidPromise());
         ch.flushOutbound();
 
         Http3HeadersFrame headersFrame = ch.readOutbound();
         Http3Headers headers = headersFrame.headers();
         Http3DataFrame data = ch.readOutbound();
-data.release();
+        data.release();
         assertThat(headers.scheme().toString(), is("https"));
         assertThat(headers.method().toString(), is("POST"));
         assertThat(headers.path().toString(), is("/hello/world"));
@@ -1003,9 +973,10 @@ data.release();
                                         responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
                                         ctx.write(responseHeaders, ctx.voidPromise());
                                         ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
-                                                ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
+                                                        ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
                                                 ctx.voidPromise());
                                         // send a fin, this also flushes
+                                        System.err.println("Http3ServerConnectionHandler.msg = " + msg);
                                         ((DuplexChannel) ctx.channel()).shutdownOutput();
                                     } else {
                                         super.channelRead(ctx, msg);
@@ -1030,7 +1001,7 @@ data.release();
             QuicChannel quicChannel = QuicChannel.newBootstrap(client)
                     .handler(new ChannelInitializer<QuicChannel>() {
                         @Override
-                        protected void initChannel(QuicChannel ch) throws Exception {
+                        protected void initChannel(QuicChannel ch) {
                             ch.pipeline().addLast(new Http3ClientConnectionHandler());
                         }
                     })
@@ -1047,6 +1018,7 @@ data.release();
                             .addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                    System.err.println("ChannelInboundHandlerAdapter.msg = " + msg);
                                     received.put(msg);
                                 }
                             });
@@ -1055,15 +1027,13 @@ data.release();
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
             request.headers().add(HttpHeaderNames.HOST, "localhost");
             stream.writeAndFlush(request);
-
-            HttpResponse respHeaders = (HttpResponse) received.poll(20, TimeUnit.SECONDS);
+            HttpResponse respHeaders = (HttpResponse) received.poll(5, TimeUnit.SECONDS);
             assertThat(respHeaders.status(), is(HttpResponseStatus.OK));
             assertThat(respHeaders, not(instanceOf(LastHttpContent.class)));
-            HttpContent respBody = (HttpContent) received.poll(20, TimeUnit.SECONDS);
+            HttpContent respBody = (HttpContent) received.poll(5, TimeUnit.SECONDS);
             assertThat(respBody.content().toString(CharsetUtil.UTF_8), is("foo"));
             respBody.release();
-
-            LastHttpContent last = (LastHttpContent) received.poll(20, TimeUnit.SECONDS);
+            LastHttpContent last = (LastHttpContent) received.poll(5, TimeUnit.SECONDS);
             last.release();
         } finally {
             group.shutdownGracefully();

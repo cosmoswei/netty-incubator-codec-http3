@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.incubator.codec.http3.example;
+package io.netty.incubator.codec.http3.my.example;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
@@ -24,29 +24,21 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.incubator.codec.http3.DefaultHttp3DataFrame;
-import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame;
-import io.netty.incubator.codec.http3.Http3;
-import io.netty.incubator.codec.http3.Http3DataFrame;
-import io.netty.incubator.codec.http3.Http3HeadersFrame;
-import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler;
-import io.netty.incubator.codec.http3.Http3ServerConnectionHandler;
-import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
-import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.incubator.codec.quic.QuicSslContext;
-import io.netty.incubator.codec.quic.QuicSslContextBuilder;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.incubator.codec.http3.*;
+import io.netty.incubator.codec.quic.*;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-public final class Http3ServerExample {
+public final class Http3ServerExampleV2 {
     private static final byte[] CONTENT = "Hello World!\r\n".getBytes(CharsetUtil.US_ASCII);
     static final int PORT = 9999;
 
-    private Http3ServerExample() { }
+    private Http3ServerExampleV2() {
+    }
 
     public static void main(String... args) throws Exception {
         int port;
@@ -62,7 +54,7 @@ public final class Http3ServerExample {
                 .applicationProtocols(Http3.supportedApplicationProtocols()).build();
         ChannelHandler codec = Http3.newQuicServerCodecBuilder()
                 .sslContext(sslContext)
-                .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
+                .maxIdleTimeout(500000, TimeUnit.MILLISECONDS)
                 .initialMaxData(10000000)
                 .initialMaxStreamDataBidirectionalLocal(1000000)
                 .initialMaxStreamDataBidirectionalRemote(1000000)
@@ -78,7 +70,6 @@ public final class Http3ServerExample {
                                     @Override
                                     protected void initChannel(QuicStreamChannel ch) {
                                         ch.pipeline().addLast(new Http3RequestStreamInboundHandler() {
-
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3HeadersFrame frame) {
@@ -89,7 +80,13 @@ public final class Http3ServerExample {
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3DataFrame frame) {
-                                                System.err.println("this is body " + ctx);
+                                                System.err.println("this is body msg = " + frame.content().toString(CharsetUtil.US_ASCII));
+                                                DefaultHttp3HeadersFrame responseHeaders = new DefaultHttp3HeadersFrame();
+//                                                responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
+//                                                ctx.write(responseHeaders, ctx.voidPromise());
+//                                                ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
+//                                                                ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
+//                                                        ctx.voidPromise());
                                                 ReferenceCountUtil.release(frame);
                                             }
 
@@ -107,7 +104,22 @@ public final class Http3ServerExample {
                                             }
                                         });
                                     }
-                                }));
+                                })).addLast(new Http3RequestStreamInboundHandler() {
+                            @Override
+                            protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) throws Exception {
+
+                            }
+
+                            @Override
+                            protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) throws Exception {
+
+                            }
+
+                            @Override
+                            protected void channelInputClosed(ChannelHandlerContext ctx) throws Exception {
+
+                            }
+                        });
                     }
                 }).build();
         try {
@@ -120,5 +132,19 @@ public final class Http3ServerExample {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    private static void res(ChannelHandlerContext ctx, Http3DataFrame frame) {
+        String string = frame.content().toString(CharsetUtil.US_ASCII);
+        string = "server's res : " + string;
+        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+        headersFrame.headers().status("200");
+        headersFrame.headers().add("server", "netty");
+        headersFrame.headers().addInt("content-length", string.getBytes(StandardCharsets.UTF_8).length);
+        ctx.write(headersFrame);
+        System.err.println("io.netty.incubator.codec.http3.my.example.Http3ServerExample.res: " + string);
+        ctx.writeAndFlush(new DefaultHttp3DataFrame(
+                Unpooled.wrappedBuffer(string.getBytes(StandardCharsets.UTF_8))))
+        ;
     }
 }
