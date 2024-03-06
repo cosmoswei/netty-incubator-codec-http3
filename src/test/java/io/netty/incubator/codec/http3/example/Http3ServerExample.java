@@ -82,25 +82,22 @@ public final class Http3ServerExample {
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3HeadersFrame frame) {
-                                                System.err.println("this is head " + ctx);
                                                 ReferenceCountUtil.release(frame);
                                             }
 
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3DataFrame frame) {
-                                                System.err.println("this is body " + ctx);
                                                 ReferenceCountUtil.release(frame);
                                             }
 
                                             @Override
                                             protected void channelInputClosed(ChannelHandlerContext ctx) {
                                                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                                                headersFrame.headers().status("200");
+                                                headersFrame.headers().status("404");
                                                 headersFrame.headers().add("server", "netty");
                                                 headersFrame.headers().addInt("content-length", CONTENT.length);
                                                 ctx.write(headersFrame);
-                                                System.err.println("this is close " + ctx);
                                                 ctx.writeAndFlush(new DefaultHttp3DataFrame(
                                                                 Unpooled.wrappedBuffer(CONTENT)))
                                                         .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);

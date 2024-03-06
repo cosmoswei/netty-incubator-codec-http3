@@ -17,7 +17,9 @@ package io.netty.incubator.codec.http3.my.example;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -41,94 +43,69 @@ public final class Http3ClientExampleV2 {
 
     public static void main(String... args) throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
+
         try {
             QuicSslContext context = QuicSslContextBuilder.forClient()
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .applicationProtocols(Http3.supportedApplicationProtocols()).build();
-
             ChannelHandler codec = Http3.newQuicClientCodecBuilder()
                     .sslContext(context)
                     .maxIdleTimeout(500000, TimeUnit.MILLISECONDS)
                     .initialMaxData(10000000)
                     .initialMaxStreamDataBidirectionalLocal(1000000)
                     .build();
+
             Bootstrap bs = new Bootstrap();
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
                     .bind(0).sync().channel();
 
-
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new Http3ClientConnectionHandler())
-                    .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, Http3ServerExample.PORT))
+                    .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, Http3ServerExampleV2.PORT))
                     .connect()
                     .get();
 
-            QuicStreamChannel streamChannel = Http3.newRequestStream(quicChannel,
-                    new Http3RequestStreamInboundHandler() {
-                        @Override
-                        protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) {
-                            System.err.println("res head = " + frame.type());
-                            ReferenceCountUtil.release(frame);
-                        }
-
-                        @Override
-                        protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
-                            System.err.println("get res = " + frame.content().toString(CharsetUtil.US_ASCII));
-                            ReferenceCountUtil.release(frame);
-                        }
-
-                        @Override
-                        protected void channelInputClosed(ChannelHandlerContext ctx) {
-                            // An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
-                            // 处理Close的时候出错了
-                            System.err.println("get closed");
-                            ctx.close();
-                        }
-                    }).sync().getNow();
-
-            Http3HeadersFrame frame = new DefaultHttp3HeadersFrame();
-            frame.headers().method("GET").path("/")
-                    .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + Http3ServerExample.PORT)
-                    .scheme("https");
-            streamChannel.write(frame);
-            streamChannel.writeAndFlush(new DefaultHttp3DataFrame(
-                            Unpooled.wrappedBuffer("start".getBytes(StandardCharsets.UTF_8))))
-                    .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                            channelFuture.sync();
-                        }
-                    });
             Scanner scanner = new Scanner(System.in);
             while (scanner.hasNextLine()) {
                 String msg = scanner.nextLine();
-                DefaultHttp3DataFrame defaultHttp3DataFrame = new DefaultHttp3DataFrame(
-                        Unpooled.wrappedBuffer(msg.getBytes(StandardCharsets.UTF_8)));
-                streamChannel.writeAndFlush(defaultHttp3DataFrame)
-                        .addListener(new ChannelFutureListener() {
+                QuicStreamChannel streamChannel = Http3.newRequestStream(quicChannel,
+                        new Http3RequestStreamInboundHandler() {
                             @Override
-                            public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                                channelFuture.sync();
+                            protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) {
+                                ReferenceCountUtil.release(frame);
                             }
-                        });
 
+                            @Override
+                            protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
+                                System.err.println("响应的数据为：" + frame.content().toString(CharsetUtil.US_ASCII));
+                                ReferenceCountUtil.release(frame);
+                            }
+
+                            @Override
+                            protected void channelInputClosed(ChannelHandlerContext ctx) {
+                                ctx.close();
+                            }
+                        }).sync().getNow();
+
+                // Write the Header frame and send the FIN to mark the end of the request.
+                // After this its not possible anymore to write any more data.
+                Http3HeadersFrame frame = new DefaultHttp3HeadersFrame();
+                frame.headers().method("GET").path("/")
+                        .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + Http3ServerExampleV2.PORT)
+                        .scheme("https");
+
+                streamChannel.write(frame);
+                streamChannel.writeAndFlush(new DefaultHttp3DataFrame(
+                        Unpooled.wrappedBuffer((msg).getBytes(StandardCharsets.UTF_8)))).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
+                // After this is done we will close the underlying datagram channel.
+                streamChannel.closeFuture().sync();
             }
-            streamChannel.closeFuture().sync();
+            // After we received the response lets also close the underlying QUIC channel and datagram channel.
             quicChannel.close().sync();
             channel.close().sync();
-            // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
-            // 等待流通道和快速通道关闭(这将在我们收到FIN后发生)。
-            // After this is done we will close the underlying datagram channel.
-            // 完成此操作后，我们将关闭底层数据报通道。
-//            streamChannel.closeFuture().sync();
-
-            // After we received the response lets also close the underlying QUIC channel and datagram channel.
-            // 在我们收到响应之后，还让我们关闭底层QUIC通道和数据报通道。
-//            quicChannel.close().sync();
-//            channel.close().sync();
-
         } finally {
             group.shutdownGracefully();
         }

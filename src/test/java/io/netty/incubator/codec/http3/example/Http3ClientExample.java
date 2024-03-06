@@ -16,14 +16,18 @@
 package io.netty.incubator.codec.http3.example;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.incubator.codec.http3.*;
+import io.netty.incubator.codec.http3.DefaultHttp3HeadersFrame;
+import io.netty.incubator.codec.http3.Http3;
+import io.netty.incubator.codec.http3.Http3ClientConnectionHandler;
+import io.netty.incubator.codec.http3.Http3DataFrame;
+import io.netty.incubator.codec.http3.Http3HeadersFrame;
+import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicSslContext;
 import io.netty.incubator.codec.quic.QuicSslContextBuilder;
@@ -33,7 +37,6 @@ import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 public final class Http3ClientExample {
@@ -90,11 +93,9 @@ public final class Http3ClientExample {
             frame.headers().method("GET").path("/")
                     .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + Http3ServerExample.PORT)
                     .scheme("https");
+            streamChannel.writeAndFlush(frame)
+                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT).sync();
 
-            streamChannel.write(frame);
-            streamChannel.writeAndFlush(new DefaultHttp3DataFrame(
-                            Unpooled.wrappedBuffer("start".getBytes(StandardCharsets.UTF_8))))
-                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
             // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
             // After this is done we will close the underlying datagram channel.
             streamChannel.closeFuture().sync();

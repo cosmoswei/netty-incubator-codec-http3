@@ -30,11 +30,11 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 public final class Http3ServerExampleV2 {
     private static final byte[] CONTENT = "Hello World!\r\n".getBytes(CharsetUtil.US_ASCII);
+    private static final byte[] CONTENT2 = "Hello World2!\r\n".getBytes(CharsetUtil.US_ASCII);
     static final int PORT = 9999;
 
     private Http3ServerExampleV2() {
@@ -70,6 +70,7 @@ public final class Http3ServerExampleV2 {
                                     @Override
                                     protected void initChannel(QuicStreamChannel ch) {
                                         ch.pipeline().addLast(new Http3RequestStreamInboundHandler() {
+
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3HeadersFrame frame) {
@@ -80,46 +81,27 @@ public final class Http3ServerExampleV2 {
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3DataFrame frame) {
-                                                System.err.println("this is body msg = " + frame.content().toString(CharsetUtil.US_ASCII));
-                                                DefaultHttp3HeadersFrame responseHeaders = new DefaultHttp3HeadersFrame();
-//                                                responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
-//                                                ctx.write(responseHeaders, ctx.voidPromise());
-//                                                ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
-//                                                                ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
-//                                                        ctx.voidPromise());
+                                                System.err.println("this is body " + ctx);
+                                                String msg = frame.content().toString(CharsetUtil.US_ASCII);
+                                                System.err.println("Http3RequestStreamInboundHandler's frame " + msg);
+                                                msg = "[service's] res = " + msg;
+                                                byte[] res = msg.getBytes(CharsetUtil.US_ASCII);
+                                                Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
+                                                headersFrame.headers().status("404");
+                                                headersFrame.headers().add("server", "netty");
+                                                headersFrame.headers().addInt("content-length", res.length);
+                                                ctx.write(headersFrame);
+                                                ctx.writeAndFlush(new DefaultHttp3DataFrame(
+                                                        Unpooled.wrappedBuffer(res))).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                                                 ReferenceCountUtil.release(frame);
                                             }
 
                                             @Override
                                             protected void channelInputClosed(ChannelHandlerContext ctx) {
-                                                Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                                                headersFrame.headers().status("200");
-                                                headersFrame.headers().add("server", "netty");
-                                                headersFrame.headers().addInt("content-length", CONTENT.length);
-                                                ctx.write(headersFrame);
-                                                System.err.println("this is close " + ctx);
-                                                ctx.writeAndFlush(new DefaultHttp3DataFrame(
-                                                                Unpooled.wrappedBuffer(CONTENT)))
-                                                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                                             }
                                         });
                                     }
-                                })).addLast(new Http3RequestStreamInboundHandler() {
-                            @Override
-                            protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) throws Exception {
-
-                            }
-
-                            @Override
-                            protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) throws Exception {
-
-                            }
-
-                            @Override
-                            protected void channelInputClosed(ChannelHandlerContext ctx) throws Exception {
-
-                            }
-                        });
+                                }));
                     }
                 }).build();
         try {
@@ -132,19 +114,5 @@ public final class Http3ServerExampleV2 {
         } finally {
             group.shutdownGracefully();
         }
-    }
-
-    private static void res(ChannelHandlerContext ctx, Http3DataFrame frame) {
-        String string = frame.content().toString(CharsetUtil.US_ASCII);
-        string = "server's res : " + string;
-        Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-        headersFrame.headers().status("200");
-        headersFrame.headers().add("server", "netty");
-        headersFrame.headers().addInt("content-length", string.getBytes(StandardCharsets.UTF_8).length);
-        ctx.write(headersFrame);
-        System.err.println("io.netty.incubator.codec.http3.my.example.Http3ServerExample.res: " + string);
-        ctx.writeAndFlush(new DefaultHttp3DataFrame(
-                Unpooled.wrappedBuffer(string.getBytes(StandardCharsets.UTF_8))))
-        ;
     }
 }

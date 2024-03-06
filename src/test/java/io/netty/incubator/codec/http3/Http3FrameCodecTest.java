@@ -32,30 +32,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_MAX_LEN;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_CANCEL_PUSH_FRAME_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_GO_AWAY_FRAME_MAX_LEN;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_GO_AWAY_FRAME_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_HEADERS_FRAME_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_MAX_PUSH_ID_FRAME_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_PUSH_PROMISE_FRAME_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_MAX_LEN;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE;
-import static io.netty.incubator.codec.http3.Http3CodecUtils.writeVariableLengthInteger;
+import static io.netty.incubator.codec.http3.Http3CodecUtils.*;
 import static io.netty.incubator.codec.http3.Http3TestUtils.assertException;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class Http3FrameCodecTest {
     private static final int MAX_HEADER_SIZE = 1024;
@@ -650,7 +633,7 @@ public class Http3FrameCodecTest {
         final Http3Frame actualFrame;
         if (isDataFrame) {
             CompositeByteBuf composite = Unpooled.compositeBuffer();
-            for (;;) {
+            for (; ; ) {
                 Http3DataFrame dataFrame = codecChannel.readInbound();
                 if (dataFrame == null) {
                     break;
@@ -720,7 +703,7 @@ public class Http3FrameCodecTest {
         }
 
         ByteBuf mergedBuffer = Unpooled.buffer();
-        for (;;) {
+        for (; ; ) {
             ByteBuf buffer = codecChannel.readOutbound();
             if (buffer == null) {
                 break;
@@ -788,7 +771,7 @@ public class Http3FrameCodecTest {
     @MethodSource("dataNoFragment")
     public void testInvalidHttp3PushPromiseFrame(int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
-        testInvalidHttp3Frame0(delayQpackStreams,  HTTP3_PUSH_PROMISE_FRAME_TYPE,
+        testInvalidHttp3Frame0(delayQpackStreams, HTTP3_PUSH_PROMISE_FRAME_TYPE,
                 MAX_HEADER_SIZE + 9, Http3ErrorCode.H3_EXCESSIVE_LOAD);
     }
 
