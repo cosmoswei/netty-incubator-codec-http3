@@ -30,6 +30,7 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
         FinalHeaders,
         Trailers
     }
+
     private State state = State.None;
 
     @Override
@@ -39,9 +40,7 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
             return;
         }
         final Http3RequestStreamFrame frame = (Http3RequestStreamFrame) msg;
-        System.err.println("state = " + state);
         final State nextState = evaluateFrame(state, frame);
-        System.err.println("nextState = " + nextState);
         if (nextState == null) {
             frameTypeUnexpected(ctx, msg);
             return;
@@ -90,7 +89,6 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
                 }
                 return isInformationalResponse((Http3HeadersFrame) frame) ? State.Headers : State.FinalHeaders;
             case FinalHeaders:
-                System.err.println("FinalHeaders = " + frame.getClass());
                 if (frame instanceof Http3HeadersFrame) {
                     if (isInformationalResponse((Http3HeadersFrame) frame)) {
                         // Information response after final response headers

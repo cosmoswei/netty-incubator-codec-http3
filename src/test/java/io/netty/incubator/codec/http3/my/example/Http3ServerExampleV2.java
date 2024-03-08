@@ -33,8 +33,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 public final class Http3ServerExampleV2 {
-    private static final byte[] CONTENT = "Hello World!\r\n".getBytes(CharsetUtil.US_ASCII);
-    private static final byte[] CONTENT2 = "Hello World2!\r\n".getBytes(CharsetUtil.US_ASCII);
     static final int PORT = 9999;
 
     private Http3ServerExampleV2() {
