@@ -39,6 +39,8 @@ import io.netty.util.ReferenceCountUtil;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.incubator.codec.http3.example.Http3ServerExample.PORT;
+
 public final class Http3ClientExample {
     private Http3ClientExample() { }
 
@@ -64,7 +66,7 @@ public final class Http3ClientExample {
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new Http3ClientConnectionHandler())
-                    .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, Http3ServerExample.PORT))
+                    .remoteAddress(new InetSocketAddress("127.0.0.1",PORT))
                     .connect()
                     .get();
 
@@ -91,7 +93,7 @@ public final class Http3ClientExample {
             // After this its not possible anymore to write any more data.
             Http3HeadersFrame frame = new DefaultHttp3HeadersFrame();
             frame.headers().method("GET").path("/")
-                    .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + Http3ServerExample.PORT)
+                    .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + PORT)
                     .scheme("https");
             streamChannel.writeAndFlush(frame)
                     .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT).sync();

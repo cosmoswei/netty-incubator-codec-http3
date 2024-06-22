@@ -179,20 +179,6 @@ public class Http3FrameCodecTest {
 
     @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")
     @MethodSource("data")
-    public void testHttp3DataFrame(
-            boolean fragmented, int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
-        setUp(maxBlockedStreams, delayQpackStreams);
-        byte[] bytes = new byte[1024];
-        ThreadLocalRandom.current().nextBytes(bytes);
-        final DefaultHttp3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame(new DefaultHttp3Headers());
-        addRequestHeaders(headersFrame.headers());
-        testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams, headersFrame);
-        testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams,
-                new DefaultHttp3DataFrame(Unpooled.wrappedBuffer(bytes)));
-    }
-
-    @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")
-    @MethodSource("data")
     public void testHttp3GoAwayFrame_63(
             boolean fragmented, int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
@@ -271,6 +257,20 @@ public class Http3FrameCodecTest {
         Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
         addRequestHeaders(headersFrame.headers());
         testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams, headersFrame);
+    }
+
+    @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")
+    @MethodSource("data")
+    public void testHttp3DataFrame(
+            boolean fragmented, int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
+        setUp(maxBlockedStreams, delayQpackStreams);
+        byte[] bytes = new byte[1024];
+        ThreadLocalRandom.current().nextBytes(bytes);
+        final DefaultHttp3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame(new DefaultHttp3Headers());
+        addRequestHeaders(headersFrame.headers());
+        testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams, headersFrame);
+        testFrameEncodedAndDecoded(fragmented, maxBlockedStreams, delayQpackStreams,
+                new DefaultHttp3DataFrame(Unpooled.wrappedBuffer(bytes)));
     }
 
     @ParameterizedTest(name = "{index}: fragmented = {0}, maxBlockedStreams = {1}, delayQpackStreams = {2}")

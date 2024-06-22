@@ -85,11 +85,11 @@ public final class Http3ServerExample {
                                                     ChannelHandlerContext ctx, Http3DataFrame frame) {
                                                 System.err.println("this is body msg = " + frame.content().toString(CharsetUtil.US_ASCII));
                                                 DefaultHttp3HeadersFrame responseHeaders = new DefaultHttp3HeadersFrame();
-//                                                responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
-//                                                ctx.write(responseHeaders, ctx.voidPromise());
-//                                                ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
-//                                                                ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
-//                                                        ctx.voidPromise());
+                                                responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
+                                                ctx.write(responseHeaders, ctx.voidPromise());
+                                                ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
+                                                                ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
+                                                        ctx.voidPromise());
                                                 ReferenceCountUtil.release(frame);
                                             }
 

@@ -60,7 +60,7 @@ public final class Http3ClientExampleV2 {
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
                     .bind(0).sync().channel();
-
+// 衔接
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new Http3ClientConnectionHandler())
                     .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, Http3ServerExampleV2.PORT))
@@ -74,12 +74,13 @@ public final class Http3ClientExampleV2 {
                         new Http3RequestStreamInboundHandler() {
                             @Override
                             protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) {
+                                System.err.println("this is head " + ctx);
                                 ReferenceCountUtil.release(frame);
                             }
 
                             @Override
                             protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
-                                System.err.println("响应的数据为：" + frame.content().toString(CharsetUtil.US_ASCII));
+                                System.err.println("this is body msg = " + frame.content().toString(CharsetUtil.US_ASCII));
                                 ReferenceCountUtil.release(frame);
                             }
 

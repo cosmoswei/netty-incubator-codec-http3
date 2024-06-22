@@ -82,12 +82,14 @@ public final class Http3ServerExample {
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3HeadersFrame frame) {
+                                                System.err.println("这是头");
                                                 ReferenceCountUtil.release(frame);
                                             }
 
                                             @Override
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3DataFrame frame) {
+                                                System.err.println("这是省体");
                                                 ReferenceCountUtil.release(frame);
                                             }
 
