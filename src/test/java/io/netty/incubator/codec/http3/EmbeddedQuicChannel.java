@@ -32,6 +32,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicChannelConfig;
 import io.netty.incubator.codec.quic.QuicConnectionAddress;
+import io.netty.incubator.codec.quic.QuicConnectionPathStats;
 import io.netty.incubator.codec.quic.QuicConnectionStats;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
@@ -39,6 +40,7 @@ import io.netty.incubator.codec.quic.QuicTransportParameters;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLEngine;
 import java.net.SocketAddress;
@@ -111,6 +113,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
+    @Nullable
     public SSLEngine sslEngine() {
         return null;
     }
@@ -169,11 +172,19 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
                 new UnsupportedOperationException("Collect stats not supported for embedded channel."));
     }
 
+    @Override
+    public Future<QuicConnectionPathStats> collectPathStats(int i, Promise<QuicConnectionPathStats> promise) {
+        return promise.setFailure(
+                new UnsupportedOperationException("Collect path stats not supported for embedded channel."));
+    }
+
+    @Nullable
     public EmbeddedQuicStreamChannel localControlStream() {
         return (EmbeddedQuicStreamChannel) Http3.getLocalControlStream(this);
     }
 
     @Override
+    @Nullable
     public QuicTransportParameters peerTransportParameters() {
         return null;
     }

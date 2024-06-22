@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.concurrent.PromiseCombiner;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 
@@ -134,7 +135,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (!(msg instanceof HttpObject)) {
-            throw new UnsupportedMessageTypeException();
+            throw new UnsupportedMessageTypeException(msg, HttpObject.class);
         }
         // 100-continue is typically a FullHttpResponse, but the decoded
         // Http3HeadersFrame should not handles as a end of stream.
@@ -221,7 +222,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             ChannelHandlerContext ctx,
             Object msg,
             ChannelPromise outerPromise,
-            PromiseCombiner combiner,
+            @Nullable PromiseCombiner combiner,
             boolean unvoidPromise
     ) {
         if (unvoidPromise) {
