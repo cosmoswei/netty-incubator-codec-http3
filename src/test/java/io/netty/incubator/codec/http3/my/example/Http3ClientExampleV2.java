@@ -60,7 +60,6 @@ public final class Http3ClientExampleV2 {
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
                     .bind(0).sync().channel();
-// 衔接
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .handler(new Http3ClientConnectionHandler())
                     .remoteAddress(new InetSocketAddress(NetUtil.LOCALHOST4, Http3ServerExampleV2.PORT))
@@ -80,7 +79,7 @@ public final class Http3ClientExampleV2 {
 
                             @Override
                             protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
-                                System.err.println("this is body msg = " + frame.content().toString(CharsetUtil.US_ASCII));
+                                System.err.println("this is body msg = " + frame.content().toString(CharsetUtil.UTF_8));
                                 ReferenceCountUtil.release(frame);
                             }
 
@@ -93,13 +92,14 @@ public final class Http3ClientExampleV2 {
                 // Write the Header frame and send the FIN to mark the end of the request.
                 // After this its not possible anymore to write any more data.
                 Http3HeadersFrame frame = new DefaultHttp3HeadersFrame();
-                frame.headers().method("GET").path("/")
+                frame.headers().method("POST").path("/")
                         .authority(NetUtil.LOCALHOST4.getHostAddress() + ":" + Http3ServerExampleV2.PORT)
                         .scheme("https");
 
                 streamChannel.write(frame);
                 streamChannel.writeAndFlush(new DefaultHttp3DataFrame(
-                        Unpooled.wrappedBuffer((msg).getBytes(StandardCharsets.UTF_8)))).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                Unpooled.wrappedBuffer((msg).getBytes(StandardCharsets.UTF_8))))
+                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                 // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
                 // After this is done we will close the underlying datagram channel.
                 streamChannel.closeFuture().sync();

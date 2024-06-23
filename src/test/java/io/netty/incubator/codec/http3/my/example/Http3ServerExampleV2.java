@@ -80,12 +80,12 @@ public final class Http3ServerExampleV2 {
                                             protected void channelRead(
                                                     ChannelHandlerContext ctx, Http3DataFrame frame) {
                                                 System.err.println("this is body " + ctx);
-                                                String msg = frame.content().toString(CharsetUtil.US_ASCII);
+                                                String msg = frame.content().toString(CharsetUtil.UTF_8);
                                                 System.err.println("Http3RequestStreamInboundHandler's frame " + msg);
                                                 msg = "[service's] res = " + msg;
-                                                byte[] res = msg.getBytes(CharsetUtil.US_ASCII);
+                                                byte[] res = msg.getBytes(CharsetUtil.UTF_8);
                                                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
-                                                headersFrame.headers().status("404");
+                                                headersFrame.headers().status("200");
                                                 headersFrame.headers().add("server", "netty");
                                                 headersFrame.headers().addInt("content-length", res.length);
                                                 ctx.write(headersFrame);
